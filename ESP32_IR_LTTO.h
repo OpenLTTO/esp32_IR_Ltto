@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>. *
- * 
+ *
  * Based on the Code from Neil Kolban: https://github.com/nkolban/esp32-snippets/blob/master/hardware/infra_red/receiver/rmt_receiver.c
  * Based on the Code from pcbreflux: https://github.com/pcbreflux/espressif/blob/master/esp32/arduino/sketchbook/ESP32_IR_Remote/ir_demo/ir_demo.ino
  * Based on the Code from Xplorer001: https://github.com/ExploreEmbedded/ESP32_RMT
@@ -34,7 +34,7 @@ extern "C" {
 
 #include <stdint.h>
 #include "esp32-hal.h"
-#include "esp_intr.h"
+#include "esp_intr_alloc.h"
 #include "driver/gpio.h"
 #include "driver/rmt.h"
 #include "driver/periph_ctrl.h"
@@ -51,7 +51,7 @@ struct LttoMessage
 {
     char            type;           //message type (Tag, Beacon, Enhanced beacon, Paclet, Data, Checksum)
     unsigned int    data;           //eg. 78dec, but info inside is often individual bits
-    
+
     unsigned int    teamNum;        //what team a tagger belongs to
     unsigned int    playerNum;      //the taggers player number in the team
     unsigned int    megaTag;        //what strength of Megatag (0-3 are valid).
@@ -62,7 +62,7 @@ struct hostGameData
 {
     int             playerNum;      //1-24 for hosted games, 0 for non-hosted
     int             gameType;       //
-    
+
 };
 
 struct taggerData
@@ -84,13 +84,13 @@ class ESP32_IR {
     void    sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone = false);
     void    sendLttoIR(char _type, int _data);
     void    sendLttoIR(String _fullDataString);
-    
+
         void    sendBrxTest();
-    
+
     int     getLttoMessageTeamNum();
     int     getLttoMessagePlayerNum();
     int     getLttoMessageMegatag();
-    
+
     //Generic methods
     void        sendIR(char type, uint8_t message);
     bool        sendLTAG(byte tagPower);
@@ -99,7 +99,7 @@ class ESP32_IR {
     bool        sendZoneBeacon(byte zoneType, byte teamID);
     bool        sendLTARbeacon(bool tagReceived, bool shieldsActive,
                                byte tagsRemaining, byte unKnown, byte teamID);
-    
+
     //HostGame methods
     int         hostPlayerToGame(uint8_t _teamNumber, uint8_t _playerNumber, uint8_t _gameType,
                                  uint8_t _gameID,     uint8_t _gameLength,   uint8_t _health,
@@ -108,10 +108,10 @@ class ESP32_IR {
     void        assignPlayer(uint8_t _gameID, uint8_t _taggerID, uint8_t _teamNumber, uint8_t _playerNumber, bool _isLtar = false);
     void        assignPlayerFailed(uint8_t _gameID, uint8_t _taggerID, bool _isLtar = false);
     void        ltarAssignPlayerSuccess(uint8_t _gameID, uint8_t _teamNumber, uint8_t _playerNumber);
-    
+
     //Debrief methods
     void        requestTagReport(uint8_t _gameID, uint8_t _teamNumber, uint8_t _playerNumber, uint8_t _reportRequired);
-    
+
     //Tagger methods
     void        taggerRequestToJoin(uint8_t _gameID, uint8_t _taggerID, uint8_t _preferredTeam, bool _isLtar = false);
     void        taggerAckPlayerAssign(uint8_t _gameID, uint8_t _taggerID);
@@ -122,19 +122,19 @@ class ESP32_IR {
                                  uint8_t _playersIncluded,  uint8_t _player1tags,           uint8_t _player2tags,
                                  uint8_t _player3tags,      uint8_t _player4tags,           uint8_t _player5tags,
                                  uint8_t _player6tags,      uint8_t _player7tags,           uint8_t _player8tags);
-    
-    
-    
+
+
+
     char        readMessageType();
     uint16_t    readRawDataPacket();
     //void        writeCancelHosting();
     //void        writeHostingInterval(int _interval);
     //int         readHostingInterval();
-    
+
     bool        available();
     void        clearMessageOverwrittenCount();
     byte        readMessageOverwrittenCount();
-    
+
     byte        readTeamID();
     byte        readPlayerID();
     byte        readShotStrength();
@@ -157,13 +157,13 @@ class ESP32_IR {
     uint16_t        calculatedCheckSum;
     //bool            cancelHosting;
     //uint16_t        hostingInterval;
-    
-    
+
+
     void    decodeRAW(rmt_item32_t *rawDataIn, int numItems, unsigned int* irDataOut);
-   
+
     void    getDataIR(rmt_item32_t item, unsigned int *datato, int index);
     void    buildItem(rmt_item32_t &item,int high_us,int low_us);
-    
+
     bool    decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *irDataOut);
     bool    checkData(rmt_item32_t *rawDataIn, int _index, int _itemToCheck, unsigned int _expectedDuration);
     //void encodeLTTO(rmt_item32_t *irDataArrayLocal, char _type, int _data);
@@ -171,10 +171,10 @@ class ESP32_IR {
     int     encodeTeamAndPlayer(uint8_t _teamNumber, uint8_t _playerNumber);
     bool    decodeTeamAndPlayer(uint8_t _teamAndPlayerNumber);
     void    clearIRdataArray();
-    
+
     int     convertDecToBCD(int _dec);
     int     convertBCDtoDec(int _bcd);
-    
+
     LttoMessage lttoMessage;
 };
 
