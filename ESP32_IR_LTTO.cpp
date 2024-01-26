@@ -105,13 +105,13 @@ ESP32_IR::ESP32_IR()
 bool ESP32_IR::ESP32_IRrxPIN(int _rxPin, int _channel)
 {
     bool _status = true;
-    
+
     if (_rxPin >= GPIO_NUM_0 && _rxPin < GPIO_NUM_MAX)      gpioNum = _rxPin;
     else                                                    _status = false;
-    
+
     if (_channel >= RMT_CHANNEL_0 && _channel < RMT_CHANNEL_MAX)  rmtPort = _channel;
     else                                                    _status = false;
-    
+
     if(_status == false && DEBUG) Serial.println("ESP32_IR::Rx Pin init failed");
     return _status;
 }
@@ -121,13 +121,13 @@ bool ESP32_IR::ESP32_IRrxPIN(int _rxPin, int _channel)
 bool ESP32_IR::ESP32_IRtxPIN(int _txPin, int _channel)
 {
     bool _status = true;
-    
+
     if (_txPin >= GPIO_NUM_0 && _txPin < GPIO_NUM_MAX)      gpioNum = _txPin;
     else                                                    _status = false;
-    
+
     if (_channel >= RMT_CHANNEL_0 && _channel < RMT_CHANNEL_MAX)  rmtPort = _channel;
     else                                                    _status = false;
-    
+
     if(_status == false && DEBUG) Serial.println("ESP32_IR::Tx Pin init failed");
     return _status;
 }
@@ -195,20 +195,20 @@ void ESP32_IR::sendIR(rmt_item32_t data[], int IRlength, bool waitTilDone)
 void ESP32_IR::sendLttoIR(String _fullDataString)
 {
     int _delimiterPosition  = 0;
-    
+
     clearIRdataArray();
     //remove any whitespace (and the \r\n)
     _fullDataString.trim();
-    
+
     while(_fullDataString.length() > 0)
     {
         char _packetType = _fullDataString.charAt(0);
         _fullDataString.remove(0, 1);
-        
+
         _delimiterPosition = _fullDataString.indexOf(":");
         uint16_t _data = _fullDataString.substring(0,_delimiterPosition).toInt();
         _fullDataString.remove(0, _delimiterPosition + 1);
-        
+
         //add data to array
         encodeLTTO(_packetType, _data);
     }
@@ -226,7 +226,7 @@ void ESP32_IR::sendLttoIR(char _type, int _data)
         Serial.print(_type);Serial.print("\t");
         Serial.print(_data);
     }
-    
+
     clearIRdataArray();
     encodeLTTO(_type, _data);
     sendIR(irDataArray, sizeof(irDataArray) );
@@ -240,15 +240,15 @@ void    ESP32_IR::sendBrxTest()
     const uint16_t    BRX_SPACE     =  500;
     const uint16_t    BRX_ONE       = 1000;
     const uint16_t    BRX_ZERO      =  500;
-    
+
     clearIRdataArray();
-    
+
     //Create MAB
     irDataArray[0].duration0 = BRX_START;
     irDataArray[0].level0    = 1;
     irDataArray[0].duration1 = BRX_SPACE;
     irDataArray[0].level1    = 0;
-    
+
     for(int index = 1; index < 25; index++)
     {
         static bool oddEven = true;
@@ -264,7 +264,7 @@ void    ESP32_IR::sendBrxTest()
     irDataArray[25].level0    = 1;
     irDataArray[25].duration1 = BRX_SPACE;
     irDataArray[25].level1    = 0;
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
     Serial.println("\n----------\nBrx sent\n----------");
 }
@@ -297,7 +297,7 @@ void ESP32_IR::encodeLTTO(char _type, uint16_t _data)
     int             _endOfPacketDelay   = 0;
     bool            _setEndOfPacket     = false;
     static int      _totalMessageTime   = 0;
-    
+
     //calculate the type an set parameters
     switch (_type)
     {
@@ -345,57 +345,57 @@ void ESP32_IR::encodeLTTO(char _type, uint16_t _data)
             if(DEBUG)   Serial.println("ESP32_IR:: ERROR - No match for TYPE:");
             break;
     }
-    
+
     if(DEBUG)
     {
         Serial.print("\tESP32_IR::encodeLTTO (String) - ");
         Serial.print(_type);Serial.print(" ");
         Serial.println(_data);
     }
-    
+
     //Populate the array
     //PreSync
     irDataArray[arrayIndex].duration0 = PRE_SYNC_MARK;
     irDataArray[arrayIndex].level0    = 1;
     irDataArray[arrayIndex].duration1 = PRE_SYNC_SPACE;
     irDataArray[arrayIndex++].level1  = 0;
-    
+
     _totalMessageTime += (PRE_SYNC_MARK + PRE_SYNC_SPACE);
-    
+
     //Header
     irDataArray[arrayIndex].duration0 = _syncHeader;
     irDataArray[arrayIndex].level0    = 1;
     irDataArray[arrayIndex].duration1 = MARK_SPACE;
     irDataArray[arrayIndex++].level1  = 0;
-    
+
     _totalMessageTime += (_syncHeader + MARK_SPACE);
-    
+
     //Data
     int _dataPulse = 0;
     _bitCount--;
-    
+
     while (_bitCount >= 0)
     {
         _dataPulse = (bitRead(_data, _bitCount)+1) * 1000;            // the +1 is to convert 0/1 data into 1/2mS pulses.
-        
+
         irDataArray[arrayIndex].duration0 = _dataPulse;
         irDataArray[arrayIndex].level0    = 1;
         irDataArray[arrayIndex].duration1 = MARK_SPACE;
         irDataArray[arrayIndex++].level1  = 0;
-        
+
         _totalMessageTime += (_dataPulse + MARK_SPACE);
 
         _bitCount--;
     }
-    
+
     //Set the end of data marker
     irDataArray[arrayIndex].duration0 = (_endOfPacketDelay/2);
     irDataArray[arrayIndex].level0    = 0;
     irDataArray[arrayIndex].duration1 = (_endOfPacketDelay/2);
     irDataArray[arrayIndex++].level1  = 0;
-    
+
     _totalMessageTime += _endOfPacketDelay;
-    
+
     if(_setEndOfPacket)
     {
         //Serial.print("\tESP32_IR::encodeLTTO() - Packet Length = ");Serial.print(_totalMessageTime/1000.0);Serial.println("mS");
@@ -413,8 +413,12 @@ void ESP32_IR::stopIR()
     rmt_config_t config;
     config.channel = (rmt_channel_t)rmtPort;
     rmt_rx_stop(config.channel);
-    if(DEBUG)   Serial.print("ESP32_IR::Uninstalling..");
-    if(DEBUG)   Serial.print("Port : "); Serial.println(config.channel);
+    if(DEBUG){
+        Serial.print("ESP32_IR::Uninstalling..");
+    }
+    if(DEBUG){
+        Serial.print("Port : "); Serial.println(config.channel);
+    }
     rmt_driver_uninstall(config.channel);
 }
 
@@ -450,6 +454,7 @@ bool ESP32_IR::irAvailabl()
 //    }
 //    //vTaskDelete(NULL);
 //    return returnValue;
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -460,7 +465,7 @@ int ESP32_IR::readIR(unsigned int *irDataRx, int maxBuf)
     rmt_config_t config;
     config.channel = (rmt_channel_t)rmtPort;
     rmt_get_ringbuf_handle(config.channel, &rb);
-    
+
     while(rb)
     {
         size_t itemSize = 0;    //Size of ringBuffer data
@@ -518,11 +523,11 @@ bool ESP32_IR::decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *i
     bool _validDataPacket   = false;
     bool _badMarkSpace      = false;
     bool _badData           = false;
-    
+
     //Clear the message data
     lttoMessage.type = ' ';
     lttoMessage.data = 0;
-    
+
     /*  Pseudo Code
      -Create a structure char+unsigned int
      -Check for the PreSync 3+6
@@ -532,14 +537,14 @@ bool ESP32_IR::decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *i
      -Check for Header 3 or 6 - set type (char)
      return true if good data, or false if bad data
      */
-    
+
     //Check for the Pre Sync pulses.
     if(checkData(rawDataIn, 0, 0, PRE_SYNC_MARK) && checkData(rawDataIn, 0, 1, PRE_SYNC_SPACE) )
         _validPreSync = true;
         //Serial.println("ESP32_IR:: PreSyncOK!");
- 
+
     int _bitCount = numItems-2;
-    
+
     //Calculate the valus of the bits.
     int _totalOfBits = 0;
     bool firstPass = true;
@@ -562,7 +567,7 @@ bool ESP32_IR::decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *i
             _badData = true;
         }
         //Serial.print("ESP32_IR:: Counting Data = "); Serial.println(_totalOfBits);
-        
+
         if (!checkData(rawDataIn, index, 1, MARK_SPACE))
         {
             _badMarkSpace = true;
@@ -570,8 +575,8 @@ bool ESP32_IR::decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *i
     }
     lttoMessage.data = _totalOfBits;
     //Serial.print("ESP32_IR:: Data = "); Serial.println(lttoMessage.data);
-    
-    
+
+
     //Work out the packet type
     if      (checkData(rawDataIn, 1, 0, TAG_PACKET_HEADER))
     {
@@ -625,10 +630,10 @@ bool ESP32_IR::decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *i
     {
         _validHeader = false;
     }
-        
+
     //Check all sections are valid and return result.
         if(_validPreSync && _validHeader && !_badMarkSpace && !_badData) _validDataPacket = true;
-        
+
         return _validDataPacket;
 }
 
@@ -637,7 +642,7 @@ bool ESP32_IR::decodeLTTO(rmt_item32_t *rawDataIn, int numItems, unsigned int *i
 bool ESP32_IR::checkData(rmt_item32_t *rawDataIn, int _index, int _itemToCheck, unsigned int _expectedDuration)
 {
     bool _result = false;
-    
+
     if(_itemToCheck == 0)
     {
         if(rawDataIn[_index].duration0 >= (_expectedDuration - (_expectedDuration * VARIATION))
@@ -657,7 +662,7 @@ bool ESP32_IR::checkData(rmt_item32_t *rawDataIn, int _index, int _itemToCheck, 
            }
     }
     else _result = false;
-           
+
     return _result;
 }
 
@@ -700,9 +705,9 @@ int ESP32_IR::hostPlayerToGame(uint8_t _teamNumber, uint8_t _playerNumber,  uint
     uint16_t        _taggerID               = -1;    // -1 means failed !
     uint8_t         _codeLength             = 0;
     bool            _isLtar                 = true;
-    
+
     if(_flags3 == -1)   _isLtar = false;
-    
+
     //callBack();
 
     if(DEBUG)   Serial.println("ESP32_IR - announcing game : ");
@@ -732,7 +737,7 @@ int ESP32_IR::hostPlayerToGame(uint8_t _teamNumber, uint8_t _playerNumber,  uint
     encodeLTTO(CHECKSUM);
 
     sendIR(irDataArray, sizeof(irDataArray) );
-        
+
     //pseudo code
     //  if(cancelHosting) interval = infinite
     //  if(interval > millis() ) sendHostGame
@@ -753,20 +758,20 @@ void ESP32_IR::assignPlayer(uint8_t _gameID, uint8_t _taggerID, uint8_t _teamNum
         Serial.print(", Player = ");
         Serial.println(_playerNumber);
     }
-    
+
     uint8_t _teamAndPlayer = encodeTeamAndPlayer(_teamNumber, _playerNumber);
-    
+
     clearIRdataArray();
-    
+
     if(_isLtar) encodeLTTO(PACKET,  131);
     else        encodeLTTO(PACKET,    1);
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _taggerID);
     encodeLTTO(DATA,    _teamAndPlayer);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
-    
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -775,15 +780,15 @@ void ESP32_IR::assignPlayerFailed(uint8_t _gameID, uint8_t _taggerID, bool _isLt
 {
     if(DEBUG)   Serial.print("ESP32_IR::assignPlayerFailed() - TaggerID: ");
     if(DEBUG)   Serial.println(_taggerID);
-    
+
     clearIRdataArray();
-    
+
     if(_isLtar) encodeLTTO(PACKET,  143);
     else        encodeLTTO(PACKET,   15);
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _taggerID);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -794,14 +799,14 @@ void ESP32_IR::ltarAssignPlayerSuccess(uint8_t _gameID, uint8_t _teamNumber, uin
     if(DEBUG)   Serial.println("ESP32_IR::ltarAssignPlayerSuccess()");
 
     uint8_t _teamAndPlayer = encodeTeamAndPlayer(_teamNumber, _playerNumber);
-    
+
     clearIRdataArray();
-    
+
     encodeLTTO(PACKET,  135);
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _teamAndPlayer);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -810,16 +815,16 @@ void ESP32_IR::ltarAssignPlayerSuccess(uint8_t _gameID, uint8_t _teamNumber, uin
 void ESP32_IR::requestTagReport(uint8_t _gameID, uint8_t _teamNumber, uint8_t _playerNumber, uint8_t _reportRequired)
 {
     if(DEBUG)   Serial.println("ESP32_IR::requestTagReport()");
-    
+
     clearIRdataArray();
-    
+
     encodeLTTO(PACKET,  49);            //0x31
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _teamNumber);
     encodeLTTO(DATA,    _playerNumber);
     encodeLTTO(DATA,    _reportRequired);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -835,16 +840,16 @@ void ESP32_IR::taggerRequestToJoin(uint8_t _gameID, uint8_t _taggerID, uint8_t _
 {
     if(DEBUG)   Serial.println("ESP32_IR::taggerRequestToJoin()");
     if(_isLtar) _preferredTeam = 0x1B;  //Fake up Firmware Version.
-    
+
     clearIRdataArray();
-    
+
     if(_isLtar) encodeLTTO(PACKET, 130);
     else        encodeLTTO(PACKET,  16);
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _taggerID);
     encodeLTTO(DATA,    _preferredTeam);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -853,14 +858,14 @@ void ESP32_IR::taggerRequestToJoin(uint8_t _gameID, uint8_t _taggerID, uint8_t _
 void ESP32_IR::taggerAckPlayerAssign(uint8_t _gameID, uint8_t _taggerID)
 {
     if(DEBUG)   Serial.println("ESP32_IR::taggerAckPlayerAssign()");
-    
+
     clearIRdataArray();
-    
+
     encodeLTTO(PACKET,  17);
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _taggerID);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -873,9 +878,9 @@ void ESP32_IR::taggerTagSummary(uint8_t _gameID,          uint8_t _teamAndPlayer
                                 uint8_t _teamReportFlag)
 {
     if(DEBUG)   Serial.println("ESP32_IR::taggerTagSummary()");
-        
+
     clearIRdataArray();
-    
+
     encodeLTTO(PACKET,  64);            //0x40
     encodeLTTO(DATA,    _gameID);
     encodeLTTO(DATA,    _teamAndPlayerNumber);
@@ -886,7 +891,7 @@ void ESP32_IR::taggerTagSummary(uint8_t _gameID,          uint8_t _teamAndPlayer
     encodeLTTO(DATA,    convertDecToBCD(_zoneTimeSeconds));
     encodeLTTO(DATA,    _teamReportFlag);
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -898,9 +903,9 @@ void ESP32_IR::taggerTeamReport(uint8_t _teamToReport,     uint8_t _gameID,     
                                 uint8_t _player6tags,      uint8_t _player7tags,           uint8_t _player8tags)
 {
     if(DEBUG)   Serial.println("ESP32_IR::taggerTagSummary()");
-    
+
     clearIRdataArray();
-    
+
     switch(_teamToReport)
     {
         case 1:
@@ -925,7 +930,7 @@ void ESP32_IR::taggerTeamReport(uint8_t _teamToReport,     uint8_t _gameID,     
     if(_playersIncluded && 0xb01000000) encodeLTTO(DATA,    (_player7tags));
     if(_playersIncluded && 0xb10000000) encodeLTTO(DATA,    (_player8tags));
     encodeLTTO(CHECKSUM);
-    
+
     sendIR(irDataArray, sizeof(irDataArray) );
 }
 
@@ -933,11 +938,11 @@ void ESP32_IR::taggerTeamReport(uint8_t _teamToReport,     uint8_t _gameID,     
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
-                 
+
 int ESP32_IR::encodeTeamAndPlayer(uint8_t _teamNumber, uint8_t _playerNumber)
 {
     uint8_t _teamAndPlayer = 0;
-    
+
     if(_teamNumber == 0)    //zero-based player number + 8
     {
         if(DEBUG)   Serial.println("ESP32_IR::encodeTeamAndPlayer() - Team = 0");
